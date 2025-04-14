@@ -1,6 +1,7 @@
 package com.nhom6.weatherapp.ui.home
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Geocoder
 import android.os.Bundle
@@ -18,6 +19,8 @@ import com.google.android.gms.location.LocationServices
 import com.nhom6.weatherapp.R
 import com.nhom6.weatherapp.data.CurrentLocation
 import com.nhom6.weatherapp.databinding.ActivityHomeBinding
+import com.nhom6.weatherapp.ui.home.HomeAdapter.ActionType
+import com.nhom6.weatherapp.ui.search.SearchActivity
 import org.koin.android.ext.android.inject
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import kotlin.getValue
@@ -38,10 +41,13 @@ class HomeActivity : AppCompatActivity() {
 
     private val homeAdapter by lazy {
         HomeAdapter(
-            onLocationClicked = {  }
+            onItemAction = { actionType ->
+                startNewActivity(actionType)
+            },
         )
     }
 
+    // SharedPreferencesManager để lưu trữ và truy xuất dữ liệu
     private val sharedPreferencesManager: SharedPreferencesManager by inject()
 
     // FusedLocationProviderClient là một lớp trong Android cung cấp API để lấy vị trí của thiết bị
@@ -52,6 +58,107 @@ class HomeActivity : AppCompatActivity() {
     // Geocoder là một lớp trong Android dùng để chuyển đổi giữa địa chỉ và tọa độ địa lý (latitude, longitude)}
     private val geocoder by lazy { Geocoder(this) }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        _binding = ActivityHomeBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        proceedWithLocationPermission()
+
+
+        // Thực hiện các thao tác sau khi view được tạo
+        setWeatherDataAdapter()
+        setObservers()
+//        setListeners()
+//        if (!isInitialLocationSet) {
+//            setCurrentLocation(sharedPreferencesManager.getCurrentLocation())
+//            isInitialLocationSet = true
+//        }
+    }
+
+
+    private fun setWeatherDataAdapter() {
+        binding.weatherDataRecyclerView.itemAnimator = null
+        binding.weatherDataRecyclerView.adapter = homeAdapter
+    }
+
+    private fun setObservers() {
+        with(homeViewModel) {
+            currentLocation.observe(this@HomeActivity) {
+                val currentLocationDataState = it.getContentIfNotHandled() ?: return@observe
+
+                if (currentLocationDataState.isLoading) {
+                    showLoading()
+                }
+
+                currentLocationDataState.currentLocation?.let { currentLocation ->
+                    hideLoading()
+                    sharedPreferencesManager.saveCurrentLocation(currentLocation)
+                    setCurrentLocation(currentLocation)
+                }
+
+                currentLocationDataState.error?.let { error ->
+                    hideLoading()
+                    Toast.makeText(this@HomeActivity, error, Toast.LENGTH_SHORT).show()
+                }
+            }
+            weatherData.observe(this@HomeActivity) {
+                val weatherDataState = it.getContentIfNotHandled() ?: return@observe
+                binding.swipeRefreshLayout.isRefreshing = weatherDataState.isLoading
+
+                weatherDataState.currentWeather?.let { currentWeather ->
+                    homeAdapter.setCurrentWeather(currentWeather)
+                }
+
+                weatherDataState.forecast?.let { forecast ->
+                    homeAdapter.setForecastData(forecast)
+                }
+
+                weatherDataState.error?.let { error ->
+                    Toast.makeText(this@HomeActivity, error, Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    // Xử lý sự kiện chuyển trang
+    private fun startNewActivity(action: ActionType) {
+        when (action) {
+            ActionType.SEARCH -> {
+                val intent = Intent(this, SearchActivity::class.java)
+                startActivity(intent)
+            }
+            ActionType.SETTING -> {
+//                val intent = Intent(this, SettingActivity::class.java)
+//                startActivity(intent)
+            }
+            ActionType.SAVED_LOCATION -> {
+//                val intent = Intent(this, SavedLocationActivity::class.java)
+//                startActivity(intent)
+            }
+        }
+    }
+
+    // Lưu vị trí hiện tại của người dùng và cập nhật dữ liệu thời tiết
+    private fun setCurrentLocation(currentLocation: CurrentLocation? = null) {
+        homeAdapter.setCurrentLocation(currentLocation ?: CurrentLocation())
+        currentLocation?.let { getWeatherData(it) }
+    }
+
+    private fun getWeatherData(currentLocation: CurrentLocation) {
+        if (currentLocation.latitude != null && currentLocation.longitude != null) {
+            homeViewModel.getWeatherData(
+                latitude = currentLocation.latitude,
+                longitude = currentLocation.longitude
+            )
+        }
+    }
+
+    //region Xử lý quyền truy cập vị trí
+    // Hàm lấy vị trí hiện tại của người dùng
+    private fun getCurrentLocation() {
+        homeViewModel.getCurrentLocation(fusedLocationProviderClient, geocoder)
+    }
 
     // Kiểm tra quyền truy cập vị trí có được cấp hay không.
     private fun isLocationPermissionGranted(): Boolean {
@@ -60,10 +167,6 @@ class HomeActivity : AppCompatActivity() {
         ) == PackageManager.PERMISSION_GRANTED  // Kiểm tra xem quyền có được cấp (PERMISSION_GRANTED) hay không.
     }
 
-    // Hàm lấy vị trí hiện tại của người dùng
-    private fun getCurrentLocation() {
-        homeViewModel.getCurrentLocation(fusedLocationProviderClient, geocoder)
-    }
 
     // Hàm xử lý quyền truy cập vị trí
     private fun proceedWithLocationPermission() {
@@ -120,71 +223,10 @@ class HomeActivity : AppCompatActivity() {
             Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show()
         }
     }
+    //endregion
 
 
-
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        _binding = ActivityHomeBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        proceedWithLocationPermission()
-
-
-        // Thực hiện các thao tác sau khi view được tạo
-        setWeatherDataAdapter()
-        setObservers()
-//        setListeners()
-//        if (!isInitialLocationSet) {
-//            setCurrentLocation(sharedPreferencesManager.getCurrentLocation())
-//            isInitialLocationSet = true
-//        }
-    }
-
-    private fun setObservers() {
-        with(homeViewModel) {
-            currentLocation.observe(this@HomeActivity) {
-                val currentLocationDataState = it.getContentIfNotHandled() ?: return@observe
-
-                if (currentLocationDataState.isLoading) {
-                    showLoading()
-                }
-
-                currentLocationDataState.currentLocation?.let { currentLocation ->
-                    hideLoading()
-//                    sharedPreferencesManager.saveCurrentLocation(currentLocation)
-                    setCurrentLocation(currentLocation)
-                }
-
-                currentLocationDataState.error?.let { error ->
-                    hideLoading()
-                    Toast.makeText(this@HomeActivity, error, Toast.LENGTH_SHORT).show()
-                }
-            }
-//            weatherData.observe(this@HomeActivity) {
-//                val weatherDataState = it.getContentIfNotHandled() ?: return@observe
-//                binding.swipeRefreshLayout.isRefreshing = weatherDataState.isLoading
-//
-//                weatherDataState.currentWeather?.let { currentWeather ->
-//                    weatherDataAdapter.setCurrentWeather(currentWeather)
-//                }
-//
-//                weatherDataState.forecast?.let { forecast ->
-//                    weatherDataAdapter.setForecastData(forecast)
-//                }
-//
-//                weatherDataState.error?.let { error ->
-//                    Toast.makeText(this, error, Toast.LENGTH_SHORT).show()
-//                }
-//            }
-        }
-    }
-    private fun setWeatherDataAdapter() {
-        binding.weatherDataRecyclerView.itemAnimator = null
-        binding.weatherDataRecyclerView.adapter = homeAdapter
-    }
-
+    //region Loading chờ tải dữ liệu
     private fun showLoading() {
         with(binding) {
             weatherDataRecyclerView.visibility = View.GONE
@@ -200,10 +242,8 @@ class HomeActivity : AppCompatActivity() {
             swipeRefreshLayout.isRefreshing = false
         }
     }
+    //endregion
 
-    private fun setCurrentLocation(currentLocation: CurrentLocation? = null) {
-        homeAdapter.setCurrentLocation(currentLocation ?: CurrentLocation())
-//        currentLocation?.let { getWeatherData(it) }
-    }
+
 
 }

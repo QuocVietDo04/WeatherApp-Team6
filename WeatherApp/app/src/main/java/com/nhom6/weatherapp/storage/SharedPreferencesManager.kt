@@ -26,4 +26,20 @@ class SharedPreferencesManager(context: Context, private val gson: Gson) {
             gson.fromJson(currentLocationJson, CurrentLocation::class.java)
         }
     }
+
+    fun saveLocationList(locationList: List<CurrentLocation>) {
+        val json = gson.toJson(locationList)
+        sharedPreferences.edit {
+            putString("locationList", json)
+        }
+    }
+
+    fun getLocationList(): List<CurrentLocation>? {
+        val json = sharedPreferences.getString("locationList", null)
+        return json?.let {
+            val type = object : com.google.gson.reflect.TypeToken<List<CurrentLocation>>() {}.type
+            gson.fromJson(it, type)
+        }
+    }
+
 }

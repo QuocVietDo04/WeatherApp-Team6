@@ -13,8 +13,14 @@ import com.nhom6.weatherapp.databinding.ItemCurrentWeatherBinding
 import com.nhom6.weatherapp.databinding.ItemForecastBinding
 
 class HomeAdapter (
-    private val onLocationClicked: () -> Unit,
+    private val onItemAction : (ActionType) -> Unit
 ) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+    enum class ActionType {
+        SEARCH,
+        SETTING,
+        SAVED_LOCATION
+    }
 
     private companion object {
         const val INDEX_CURRENT_LOCATION = 0
@@ -102,9 +108,9 @@ class HomeAdapter (
         fun bind(currentLocation: CurrentLocation) {
             with(binding) {
                 textCurrentLocation.text = currentLocation.location
-                btnSetting.setOnClickListener { onLocationClicked() }
-                btnLocationList.setOnClickListener { onLocationClicked() }
-                btnSearch.setOnClickListener { onLocationClicked() }
+                btnSetting.setOnClickListener { onItemAction(ActionType.SETTING) }
+                btnSavedLocation.setOnClickListener { onItemAction(ActionType.SAVED_LOCATION) }
+                btnSearch.setOnClickListener { onItemAction(ActionType.SEARCH) }
             }
         }
     }

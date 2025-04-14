@@ -1,30 +1,65 @@
 package com.nhom6.weatherapp.data.di
 
+import android.util.Log
 import com.nhom6.weatherapp.data.remote.api.LocationAPI
 import com.nhom6.weatherapp.data.remote.api.WeatherAPI
 import okhttp3.OkHttpClient
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+// Định nghĩa các qualifiers cho OkHttpClient và Retrofit
+val weatherQualifier = named("WeatherOkHttpClient")
+val locationQualifier = named("LocationOkHttpClient")
+val weatherRetrofitQualifier = named("WeatherRetrofit")
+val locationRetrofitQualifier = named("LocationRetrofit")
+
 val remoteModule = module {
-    factory { okHttpClient() }          // Mỗi lần cần sẽ tạo mới một OkHttpClient
-    single { retrofitForWeather(get()) }          // Chỉ tạo duy nhất một Retrofit dùng chung toàn app
-    single { retrofitForLocation(get()) }          // Chỉ tạo duy nhất một Retrofit dùng chung toàn app
-    factory { weatherAPI(get()) }       // Mỗi lần cần sẽ tạo mới một WeatherAPI, sử dụng Retrofit
-    factory { locationAPI(get()) }      // Mỗi lần cần sẽ tạo mới một LocationAPI
+    // Inject OkHttpClient riêng cho từng API
+    factory(weatherQualifier) { weatherOkHttpClient() }
+    factory(locationQualifier) { locationOkHttpClient() }
+
+    // Inject Retrofit với OkHttpClient tương ứng
+    single(weatherRetrofitQualifier) { retrofitForWeather(get(weatherQualifier)) }
+    single(locationRetrofitQualifier) { retrofitForLocation(get(locationQualifier)) }
+
+    // Inject các API với Retrofit tương ứng
+    factory { weatherAPI(get(weatherRetrofitQualifier)) }
+    factory { locationAPI(get(locationRetrofitQualifier)) }
 }
 
 // Người giao hàng – OkHttpClient chịu trách nhiệm kết nối và truyền tải yêu cầu HTTP
-private fun okHttpClient(): OkHttpClient {
+private fun weatherOkHttpClient(): OkHttpClient {
     return OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)   // Thời gian tối đa để kết nối tới server
-        .writeTimeout(30, TimeUnit.SECONDS)     // Thời gian tối đa để gửi yêu cầu
-        .readTimeout(30, TimeUnit.SECONDS)      // Thời gian tối đa để nhận phản hồi
-        .retryOnConnectionFailure(false)        // Không thử lại khi kết nối thất bại
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(false)
+
         .build()
 }
+
+private fun locationOkHttpClient(): OkHttpClient {
+    return OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .retryOnConnectionFailure(false)
+        .addInterceptor { chain ->
+            val request = chain.request()
+            val response = chain.proceed(request)
+
+            // Log the response URL after request
+            Log.d("OkHttp", "Request URL: ${request.url}")
+            Log.d("OkHttp", "Response URL: ${response.request.url}")
+
+            response
+        }
+        .build()
+}
+
 
 // Công ty giao hàng – Retrofit kết hợp OkHttpClient để gửi và nhận yêu cầu từ server
 private fun retrofitForWeather(okHttpClient: OkHttpClient): Retrofit {

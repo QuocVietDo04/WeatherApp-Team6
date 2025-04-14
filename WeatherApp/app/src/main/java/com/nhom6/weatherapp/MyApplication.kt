@@ -3,6 +3,7 @@ package com.nhom6.weatherapp
 import android.app.Application
 import com.nhom6.weatherapp.data.di.remoteModule
 import com.nhom6.weatherapp.data.di.repositoryModule
+import com.nhom6.weatherapp.data.di.serializerModule
 import com.nhom6.weatherapp.data.di.storageModule
 import com.nhom6.weatherapp.data.di.viewModelModule
 import org.koin.android.ext.koin.androidContext
@@ -20,6 +21,7 @@ class MyApplication : Application() {
                     viewModelModule,
                     remoteModule,
                     storageModule,
+                    serializerModule,
                 )
             )
         }

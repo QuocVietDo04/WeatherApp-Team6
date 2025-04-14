@@ -44,15 +44,6 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        // Xử lý LOCATION_BASE_URL
-        val locationBaseUrl = localProperties.getProperty("LOCATION_BASE_URL")
-        if (locationBaseUrl.isNullOrEmpty()) {
-            println("WARN: LOCATION_BASE_URL not found in local.properties. Build might fail or use default values.")
-            buildConfigField("String", "LOCATION_BASE_URL", "\"https://default-api.com/v1/\"") // Thêm giá trị mặc định cho BASE_URL
-        } else {
-            buildConfigField("String", "LOCATION_BASE_URL", "\"$locationBaseUrl\"")
-        }
-
         // Xử lý WEATHER_BASE_URL
         val weatherBaseUrl = localProperties.getProperty("WEATHER_BASE_URL")
         if (weatherBaseUrl.isNullOrEmpty()) {
@@ -61,7 +52,6 @@ android {
         } else {
             buildConfigField("String", "WEATHER_BASE_URL", "\"$weatherBaseUrl\"")
         }
-        buildConfigField("String", "WEATHER_BASE_URL", "\"$weatherBaseUrl\"")
 
         // Xử lý WEATHER_API_KEY
         val weatherApiKey = localProperties.getProperty("WEATHER_API_KEY")
@@ -70,6 +60,15 @@ android {
             buildConfigField("String", "WEATHER_API_KEY", "\"\"") // Thêm giá trị mặc định cho API_KEY
         } else {
             buildConfigField("String", "WEATHER_API_KEY", "\"$weatherApiKey\"")
+        }
+
+        // Xử lý LOCATION_BASE_URL
+        val locationBaseUrl = localProperties.getProperty("LOCATION_BASE_URL")
+        if (locationBaseUrl.isNullOrEmpty()) {
+            println("WARN: LOCATION_BASE_URL not found in local.properties. Build might fail or use default values.")
+            buildConfigField("String", "LOCATION_BASE_URL", "\"https://default-api.com/v1/\"") // Thêm giá trị mặc định cho BASE_URL
+        } else {
+            buildConfigField("String", "LOCATION_BASE_URL", "\"$locationBaseUrl\"")
         }
     }
 
@@ -136,4 +135,7 @@ dependencies {
 
     // SwipeRefreshLayout
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
+
+    // Gson
+    implementation("com.google.code.gson:gson:2.10.1")
 }
